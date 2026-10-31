@@ -34,8 +34,12 @@ def carte_ancienne() -> bool:
 
 def environnement():
     env = dict(os.environ)
-    if carte_ancienne():  # sinon le moteur musical produit des « NaN » (son vide)
-        env.setdefault("ACESTEP_DTYPE", "float32")
+    if carte_ancienne():  # T4, GTX… : réglages sûrs pour le moteur musical
+        env.setdefault("ACESTEP_DTYPE", "float32")             # sinon son vide (NaN)
+        env.setdefault("ACESTEP_OFFLOAD_TO_CPU", "true")       # float32 prend 2x plus de mémoire
+        env.setdefault("ACESTEP_USE_FLASH_ATTENTION", "false") # non prise en charge avant 2020
+        env.setdefault("ACESTEP_LM_BACKEND", "pt")             # moteur de texte standard (vllm exige une carte récente)
+        env.setdefault("ACESTEP_LM_MODEL_PATH", "acestep-5Hz-lm-0.6B")  # le plus léger, plus rapide
     env.setdefault("UV_CACHE_DIR", str(RACINE / "cache" / "uv"))
     env.setdefault("UV_PYTHON_INSTALL_DIR", str(RACINE / "outils" / "python"))
     env.setdefault("HF_HOME", str(RACINE / "cache" / "huggingface"))

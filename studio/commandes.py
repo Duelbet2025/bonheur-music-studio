@@ -91,7 +91,20 @@ def fabriquer_chanson(dossier: Path, enregistrements, journal=print):
     travail, livraison = dossier / "travail", dossier / "livraison"
     maj_statut(dossier, "Chanson en cours")
 
-    # 1. Voix du client
+    # 1. Composition (d'abord : si le moteur musical a un souci, on le sait tout de suite)
+    description = musique.construire_description(
+        fiche["style"], fiche["ambiance"], fiche["instruments"], fiche["voix_genre"], fiche.get("description", ""))
+    fiche["description_ia"] = description
+    enregistrer_fiche(dossier, fiche)
+    duree = min(float(fiche["duree"]), formule["duree_max"])
+    fichiers, paroles = musique.generer_chansons(
+        description=description, paroles=preparer_paroles(fiche.get("paroles", "")),
+        langue=LANGUES.get(fiche["langue"], "fr"), bpm=fiche.get("bpm") or STYLES[fiche["style"]]["bpm"],
+        duree=duree, versions=formule["versions"], dossier_sortie=travail, journal=journal,
+        sujet=" ".join(x for x in (f"A {fiche['style']} song titled \"{fiche['titre']}\".",
+                                   fiche.get("description", "").strip(), description) if x))
+
+    # 2. Voix du client (apprentissage si nouvelle cliente)
     modele = None
     if not fiche.get("voix_ia"):
         modele = voix.modele_existant(fiche["client"]) if fiche.get("reutiliser_voix") else None
@@ -107,19 +120,6 @@ def fabriquer_chanson(dossier: Path, enregistrements, journal=print):
                 shutil.copy(f, cible)
                 copies.append(cible)
             modele = voix.entrainer_voix(fiche["client"], copies, formule["epoques_voix"], journal=journal)
-
-    # 2. Composition
-    description = musique.construire_description(
-        fiche["style"], fiche["ambiance"], fiche["instruments"], fiche["voix_genre"], fiche.get("description", ""))
-    fiche["description_ia"] = description
-    enregistrer_fiche(dossier, fiche)
-    duree = min(float(fiche["duree"]), formule["duree_max"])
-    fichiers, paroles = musique.generer_chansons(
-        description=description, paroles=preparer_paroles(fiche.get("paroles", "")),
-        langue=LANGUES.get(fiche["langue"], "fr"), bpm=fiche.get("bpm") or STYLES[fiche["style"]]["bpm"],
-        duree=duree, versions=formule["versions"], dossier_sortie=travail, journal=journal,
-        sujet=" ".join(x for x in (f"A {fiche['style']} song titled \"{fiche['titre']}\".",
-                                   fiche.get("description", "").strip(), description) if x))
 
     # 3. Voix du client + mixage pour chaque version
     versions = []
