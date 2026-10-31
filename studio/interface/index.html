@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bonheur Music Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --nuit:#1E1430; --panneau:#2A1D40; --panneau2:#352650; --trait:#4A3868;
+  --texte:#F3EDE4; --doux:#B8A9CF; --safran:#F2A93B; --safran-fonce:#C9821C;
+  --sarcelle:#2BB3A3; --corail:#E5604D;
+  --titre:"Unbounded","Segoe UI",system-ui,sans-serif;
+  --corps:"Manrope","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--nuit);color:var(--texte);font:15px/1.55 var(--corps)}
+a{color:var(--safran)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--safran);outline-offset:2px}
+
+/* En-tête avec bande inspirée du pagne wax */
+header{position:relative;padding:22px 28px 26px;background:var(--panneau)}
+header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:8px;
+  background:
+   radial-gradient(circle at 12px 4px,var(--safran) 3px,transparent 3.5px) 0 0/24px 8px,
+   repeating-linear-gradient(90deg,var(--sarcelle) 0 12px,var(--corail) 12px 24px,var(--safran-fonce) 24px 36px,var(--nuit) 36px 48px);}
+.marque{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.marque h1{font:700 22px/1.1 var(--titre);margin:0;letter-spacing:.01em}
+.marque span{color:var(--doux);font-size:13px}
+.marque .fermer{margin-left:auto;padding:7px 14px;font-size:13px}
+.ferme{display:grid;place-items:center;min-height:100vh;text-align:center;padding:20px}
+.ferme h1{font:700 22px var(--titre)}
+#etat{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--doux)}
+.voyant{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--corail);vertical-align:1px}
+.voyant.ok{background:var(--sarcelle)}
+
+.page{display:grid;grid-template-columns:210px 1fr;min-height:calc(100vh - 110px)}
+nav{padding:20px 14px;border-right:1px solid var(--trait)}
+nav button{display:block;width:100%;text-align:left;background:none;border:0;padding:10px 12px;border-radius:8px;color:var(--doux);cursor:pointer;margin-bottom:4px}
+nav button[aria-current="true"]{background:var(--panneau2);color:var(--texte);box-shadow:inset 3px 0 0 var(--safran)}
+main{padding:26px 32px 120px;max-width:1180px}
+h2{font:500 20px/1.2 var(--titre);margin:0 0 18px}
+h3{font:500 15px/1.3 var(--titre);margin:0 0 14px;color:var(--safran)}
+.vue[hidden]{display:none}
+
+/* Formules : trois paliers */
+.formules{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:26px}
+.formule{position:relative;border:1px solid var(--trait);border-radius:12px;padding:16px;cursor:pointer;background:var(--panneau)}
+.formule input{position:absolute;opacity:0}
+.formule strong{font:700 17px var(--titre);display:block;margin-bottom:6px}
+.formule p{margin:0;color:var(--doux);font-size:13px}
+.formule .barres{display:flex;gap:3px;margin-bottom:10px}
+.formule .barres i{width:6px;height:14px;border-radius:2px;background:var(--trait)}
+.formule:has(input:checked){border-color:var(--safran);background:var(--panneau2)}
+.formule:has(input:checked) .barres i.on{background:var(--safran)}
+.formule:has(input:focus-visible){outline:2px solid var(--safran)}
+
+.grille{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+section.bloc{background:var(--panneau);border-radius:12px;padding:20px;margin-bottom:22px}
+label{display:block;font-size:13px;color:var(--doux);margin:0 0 5px}
+.champ{margin-bottom:14px}
+input[type=text],input[type=tel],input[type=number],select,textarea{width:100%;background:var(--nuit);border:1px solid var(--trait);border-radius:8px;padding:9px 11px}
+textarea{min-height:240px;resize:vertical;line-height:1.5}
+.ligne{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+input[type=range]{width:100%;accent-color:var(--safran)}
+.valeur{float:right;color:var(--texte);font-weight:700}
+.aide{font-size:12.5px;color:var(--doux);margin:6px 0 0}
+.instruments{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
+.instr{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px}
+.instr select{width:118px;padding:6px 8px}
+.coche{display:flex;gap:10px;align-items:flex-start;margin:10px 0;font-size:14px;color:var(--texte)}
+.coche input{margin-top:4px;accent-color:var(--safran)}
+.depot{border:1.5px dashed var(--trait);border-radius:10px;padding:16px;text-align:center;color:var(--doux);font-size:14px}
+.depot input{display:block;margin:10px auto 0;color:var(--doux)}
+
+.barre-action{position:fixed;left:210px;right:0;bottom:0;padding:14px 32px;background:rgba(30,20,48,.94);border-top:1px solid var(--trait);display:flex;gap:16px;align-items:center}
+.btn{background:var(--safran);color:#2A1A05;border:0;border-radius:9px;padding:11px 20px;font-weight:700;cursor:pointer}
+.btn:hover{background:#f7bb5e}
+.btn:disabled{opacity:.5;cursor:wait}
+.btn.second{background:var(--panneau2);color:var(--texte);border:1px solid var(--trait)}
+#message{font-size:14px}
+.erreur{color:var(--corail)} .succes{color:var(--sarcelle)}
+
+/* Commandes */
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;color:var(--doux);font-weight:500;padding:8px 10px;border-bottom:1px solid var(--trait)}
+td{padding:11px 10px;border-bottom:1px solid var(--panneau2)}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--panneau)}
+.pastille{display:inline-block;padding:2px 9px;border-radius:20px;font-size:12.5px;background:var(--panneau2)}
+.pastille.livree{background:rgba(43,179,163,.18);color:var(--sarcelle)}
+.pastille.erreur{background:rgba(229,96,77,.18);color:var(--corail)}
+.vide{color:var(--doux);padding:30px 0}
+
+#detail .entete{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+#detail .meta{color:var(--doux);font-size:14px}
+pre.journal{background:#150E22;border-radius:10px;padding:14px;max-height:280px;overflow:auto;font:12.5px/1.5 Consolas,"Cascadia Mono",monospace;color:#d6cbe8;white-space:pre-wrap;margin:0}
+.versions{display:grid;gap:12px}
+.version{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;background:var(--nuit);border-radius:10px;padding:12px 14px}
+.version audio{width:100%}
+.version label.choix{margin:0;color:var(--texte);display:flex;gap:8px;align-items:center;font-weight:700}
+video{width:100%;border-radius:10px;background:#000;max-height:420px}
+.liens{display:flex;flex-direction:column;gap:6px;font-size:14px}
+.progression{height:6px;border-radius:3px;background:var(--panneau2);overflow:hidden;margin:6px 0 14px}
+.progression i{display:block;height:100%;width:40%;background:var(--safran);animation:aller 1.6s ease-in-out infinite}
+@keyframes aller{0%{margin-left:-40%}100%{margin-left:100%}}
+@media (prefers-reduced-motion:reduce){.progression i{animation:none;width:100%;opacity:.5}}
+
+@media (max-width:900px){
+  .page{grid-template-columns:minmax(0,1fr)}
+  main,.grille>div{min-width:0}
+  .ligne,.instruments{grid-template-columns:1fr}
+  .version{grid-template-columns:1fr}
+  nav{display:flex;gap:6px;border-right:0;border-bottom:1px solid var(--trait);overflow:auto}
+  nav button{width:auto;white-space:nowrap}
+  .grille,.formules{grid-template-columns:1fr}
+  .barre-action{left:0}
+  main{padding:20px 16px 120px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="marque"><h1>Bonheur Music Studio</h1><span>Studio privé — chansons et clips pour vos clients</span>
+    <button class="btn second fermer" id="b-fermer" type="button">Fermer le studio</button></div>
+  <div id="etat" aria-live="polite">Vérification des moteurs…</div>
+</header>
+
+<div class="page">
+<nav aria-label="Navigation">
+  <button data-vue="nouvelle" aria-current="true">Nouvelle commande</button>
+  <button data-vue="commandes">Commandes</button>
+</nav>
+
+<main>
+<!-- ============ NOUVELLE COMMANDE ============ -->
+<form id="vue-nouvelle" class="vue" autocomplete="off">
+  <h2>Nouvelle commande</h2>
+  <div class="formules" id="formules" role="radiogroup" aria-label="Formule"></div>
+
+  <div class="grille">
+    <div>
+      <section class="bloc">
+        <h3>Le client</h3>
+        <div class="ligne">
+          <div class="champ"><label for="client">Nom ou nom d'artiste</label><input type="text" id="client" name="client" required></div>
+          <div class="champ"><label for="contact">WhatsApp / téléphone</label><input type="tel" id="contact" name="contact"></div>
+        </div>
+        <div class="ligne">
+          <div class="champ"><label for="titre">Titre de la chanson</label><input type="text" id="titre" name="titre" required></div>
+          <div class="champ"><label for="prix">Prix convenu (FCFA)</label><input type="text" id="prix" name="prix" inputmode="numeric"></div>
+        </div>
+      </section>
+
+      <section class="bloc">
+        <h3>La musique</h3>
+        <div class="ligne">
+          <div class="champ"><label for="style">Style</label><select id="style" name="style"></select></div>
+          <div class="champ"><label for="ambiance">Ambiance</label><select id="ambiance" name="ambiance"></select></div>
+        </div>
+        <div class="champ"><label for="bpm">Tempo <span class="valeur" id="bpm-val"></span></label>
+          <input type="range" id="bpm" name="bpm" min="60" max="180" step="1">
+          <p class="aide">Réglé automatiquement selon le style. 70 = lent, 100 = moyen, 125 = rapide.</p></div>
+        <div class="champ"><label for="duree">Durée <span class="valeur" id="duree-val"></span></label>
+          <input type="range" id="duree" name="duree" min="60" max="300" step="10" value="180"></div>
+        <label>Instruments</label>
+        <div class="instruments" id="instruments"></div>
+        <div class="champ" style="margin-top:14px"><label for="description">Détails en plus (facultatif)</label>
+          <input type="text" id="description" name="description" placeholder="ex. intro à la guitare acoustique, ambiance de mariage, sons de foule">
+          <p class="aide">Écrivez en français ou en anglais.</p></div>
+      </section>
+    </div>
+
+    <div>
+      <section class="bloc">
+        <h3>Les paroles</h3>
+        <div class="ligne">
+          <div class="champ"><label for="langue">Langue</label><select id="langue" name="langue"></select></div>
+          <div class="champ"><label for="voix_genre">Voix</label><select id="voix_genre" name="voix_genre"><option>Homme</option><option>Femme</option></select></div>
+        </div>
+        <div class="champ"><label for="paroles">Paroles du client</label>
+          <textarea id="paroles" name="paroles" placeholder="[Couplet]&#10;Première ligne…&#10;&#10;[Refrain]&#10;Ligne du refrain…&#10;&#10;[Couplet]&#10;…"></textarea>
+          <p class="aide">Utilisez [Couplet], [Refrain], [Pont], [Intro], [Outro]. Laissez vide pour que l'IA écrive les paroles à partir du style et des détails.</p></div>
+      </section>
+
+      <section class="bloc">
+        <h3>La voix du client</h3>
+        <div class="depot">
+          Enregistrements de la voix (5 à 10 minutes au total, chant de préférence, sans musique)
+          <input type="file" id="voix" name="voix" accept="audio/*,.ogg,.opus,.m4a,.mp3,.wav" multiple>
+        </div>
+        <p class="aide">Les notes vocales WhatsApp fonctionnent. Le bruit de fond est retiré automatiquement.</p>
+        <label class="coche"><input type="checkbox" id="reutiliser_voix" name="reutiliser_voix" value="oui"> Ce client est déjà venu : réutiliser sa voix enregistrée</label>
+        <label class="coche"><input type="checkbox" id="voix_ia" name="voix_ia" value="oui"> Pas de voix du client : garder la voix chantée par l'IA</label>
+        <div class="champ"><label for="transposition">Ajuster la hauteur de la voix <span class="valeur" id="transpo-val"></span></label>
+          <input type="range" id="transposition" name="transposition" min="-12" max="12" value="0">
+          <p class="aide">Laissez à 0. Si la voix sonne trop aiguë, descendez (−); trop grave, montez (+).</p></div>
+        <label class="coche"><input type="checkbox" id="consentement" name="consentement" value="oui"> Je confirme que la voix envoyée est celle du client, avec son accord</label>
+      </section>
+    </div>
+  </div>
+
+  <div class="barre-action">
+    <button class="btn" type="submit" id="lancer">Composer la chanson</button>
+    <span id="message" role="status"></span>
+  </div>
+</form>
+
+<!-- ============ COMMANDES ============ -->
+<section id="vue-commandes" class="vue" hidden>
+  <h2>Commandes</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Client</th><th>Titre</th><th>Formule</th><th>Prix</th><th>Payé</th><th>Statut</th></tr></thead>
+    <tbody id="liste"></tbody>
+  </table>
+  <p class="vide" id="liste-vide" hidden>Aucune commande pour l'instant. Créez-en une dans « Nouvelle commande ».</p>
+</section>
+
+<!-- ============ DÉTAIL ============ -->
+<section id="vue-detail" class="vue" hidden>
+  <div id="detail"></div>
+</section>
+</main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let OPTIONS, suivi = null;
+
+const lienFichier = (chemin, telecharger) =>
+  `/fichier?chemin=${encodeURIComponent(chemin)}${telecharger ? "&telecharger=1" : ""}`;
+const nomFichier = c => c.split(/[\\/]/).pop();
+const echapper = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function montrer(vue) {
+  document.querySelectorAll(".vue").forEach(v => v.hidden = v.id !== "vue-" + vue);
+  document.querySelectorAll("nav button").forEach(b =>
+    b.setAttribute("aria-current", b.dataset.vue === vue || (vue === "detail" && b.dataset.vue === "commandes")));
+  if (vue === "commandes") chargerListe();
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => montrer(b.dataset.vue));
+
+async function api(url, options) {
+  const r = await fetch(url, options);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.erreur || (r.status === 401 ? "Accès refusé : rouvrez le studio depuis votre page de lancement." : "Le studio ne répond pas pour le moment."));
+  return d;
+}
+
+// ---------- État des moteurs ----------
+async function verifierEtat() {
+  try {
+    const e = await api("/api/etat");
+    const v = (ok, t) => `<span><i class="voyant ${ok ? "ok" : ""}"></i>${t}</span>`;
+    $("#etat").innerHTML =
+      v(e.musique, e.musique ? "Composition prête" : "Moteur musical en démarrage" + (e.musique_detail ? " : " + echapper(e.musique_detail) : "…")) +
+      v(e.voix, e.voix ? "Voix prête" : "Voix non installée") +
+      v(e.separation, e.separation ? "Séparation prête" : "Séparation non installée") +
+      (OPTIONS && OPTIONS.en_ligne
+        ? v(e.performance, e.performance ? "Chant + gestes + danse (IA) prêts" : "Chant + gestes + danse : préparation" + (e.performance_detail ? " : " + echapper(e.performance_detail) : "…"))
+        : v(e.animation, e.animation ? "Animation IA prête" : "Animation IA non installée") +
+          v(e.levres, e.levres ? "Synchro des lèvres prête" : "Synchro des lèvres non installée")) +
+      v(!!e.gpu, e.gpu ? "Carte graphique : " + echapper(e.gpu) : "Aucune carte NVIDIA détectée") +
+      (e.file ? `<span>${e.file} travail(s) en cours</span>` : "");
+  } catch { $("#etat").textContent = "Le studio ne répond pas."; }
+}
+
+// ---------- Formulaire ----------
+async function init() {
+  OPTIONS = await api("/api/options");
+  const niveaux = { Standard: 1, Pro: 2, Ultra: 3 };
+  $("#formules").innerHTML = Object.entries(OPTIONS.formules).map(([nom, f], i) => `
+    <label class="formule"><input type="radio" name="formule" value="${nom}" ${i === 0 ? "checked" : ""}>
+      <span class="barres">${[1,2,3].map(n => `<i class="${n <= niveaux[nom] ? "on" : ""}"></i>`).join("")}</span>
+      <strong>${nom}</strong><p>${echapper(f.description)}</p></label>`).join("");
+  const remplir = (sel, liste) => $(sel).innerHTML = liste.map(x => `<option>${echapper(x)}</option>`).join("");
+  remplir("#style", Object.keys(OPTIONS.styles));
+  remplir("#ambiance", OPTIONS.ambiances);
+  remplir("#langue", OPTIONS.langues);
+  $("#instruments").innerHTML = OPTIONS.instruments.map((n, i) => `
+    <div class="instr"><span>${echapper(n)}</span>
+      <select data-instr="${echapper(n)}" aria-label="${echapper(n)}">${OPTIONS.niveaux.map(v =>
+        `<option ${v === (i < 2 ? "Normal" : "Absent") ? "selected" : ""}>${v}</option>`).join("")}</select></div>`).join("");
+  $("#style").onchange = () => { $("#bpm").value = OPTIONS.styles[$("#style").value]; majValeurs(); };
+  document.querySelectorAll("input[name=formule]").forEach(r => r.onchange = majValeurs);
+  ["bpm", "duree", "transposition"].forEach(id => $("#" + id).oninput = majValeurs);
+  $("#voix_ia").onchange = $("#reutiliser_voix").onchange = majValeurs;
+  $("#style").onchange();
+  verifierEtat(); setInterval(verifierEtat, 8000);
+}
+
+function majValeurs() {
+  const formule = OPTIONS.formules[document.querySelector("input[name=formule]:checked").value];
+  $("#duree").max = formule.duree_max;
+  if (+$("#duree").value > formule.duree_max) $("#duree").value = formule.duree_max;
+  const d = +$("#duree").value;
+  $("#duree-val").textContent = `${Math.floor(d / 60)} min ${String(d % 60).padStart(2, "0")}`;
+  $("#bpm-val").textContent = $("#bpm").value + " BPM";
+  const t = +$("#transposition").value;
+  $("#transpo-val").textContent = t > 0 ? "+" + t : t;
+  const iaSeule = $("#voix_ia").checked;
+  $("#voix").disabled = iaSeule || $("#reutiliser_voix").checked;
+  $("#consentement").disabled = iaSeule;
+}
+
+$("#vue-nouvelle").onsubmit = async ev => {
+  ev.preventDefault();
+  const msg = $("#message"); msg.className = "";
+  const donnees = new FormData(ev.target);
+  const instruments = {};
+  document.querySelectorAll("[data-instr]").forEach(s => instruments[s.dataset.instr] = s.value);
+  donnees.set("instruments", JSON.stringify(instruments));
+  if (!$("#voix_ia").checked && !$("#reutiliser_voix").checked && !$("#voix").files.length) {
+    msg.className = "erreur"; msg.textContent = "Ajoutez la voix du client, ou cochez « garder la voix chantée par l'IA »."; return;
+  }
+  $("#lancer").disabled = true; msg.textContent = "Envoi des fichiers…";
+  try {
+    const r = await api("/api/commandes", { method: "POST", body: donnees });
+    msg.className = "succes"; msg.textContent = "Commande créée. La composition démarre.";
+    ev.target.reset(); init();
+    ouvrirDetail(r.commande);
+  } catch (e) { msg.className = "erreur"; msg.textContent = e.message; }
+  finally { $("#lancer").disabled = false; }
+};
+
+// ---------- Liste des commandes ----------
+async function chargerListe() {
+  const liste = await api("/api/commandes");
+  $("#liste-vide").hidden = liste.length > 0;
+  $("#liste").innerHTML = liste.map(c => `
+    <tr data-id="${echapper(c.id)}" tabindex="0">
+      <td>${echapper((c.date || "").replace("T", " "))}</td><td>${echapper(c.client)}</td><td>${echapper(c.titre)}</td>
+      <td>${echapper(c.formule)}</td><td>${echapper(c.prix)}</td><td>${c.paye ? "Oui" : "Non"}</td>
+      <td><span class="pastille ${c.statut === "Livrée" ? "livree" : /Erreur/.test(c.statut) ? "erreur" : ""}">${echapper(c.statut)}</span></td></tr>`).join("");
+  document.querySelectorAll("#liste tr").forEach(tr => {
+    tr.onclick = () => ouvrirDetail(tr.dataset.id);
+    tr.onkeydown = e => { if (e.key === "Enter") ouvrirDetail(tr.dataset.id); };
+  });
+}
+
+// ---------- Détail d'une commande ----------
+async function ouvrirDetail(id) {
+  montrer("detail");
+  clearTimeout(suivi);
+  const c = await api("/api/commandes/" + encodeURIComponent(id));
+  const travail = c.travaux.at(-1);
+  const actif = travail && ["en attente", "en cours"].includes(travail.etat);
+  let h = `<div class="entete"><div><h2>${echapper(c.titre)} — ${echapper(c.client)}</h2>
+    <div class="meta">${echapper(c.formule)} · ${echapper(c.style)} · ${echapper(c.ambiance)} · ${c.prix ? echapper(c.prix) + " FCFA" : "prix non renseigné"} ${c.contact ? "· " + echapper(c.contact) : ""}</div></div>
+    <div style="display:flex;gap:10px"><button class="btn second" id="b-paye">${c.paye ? "Marquer non payé" : "Marquer payé"}</button>
+    ${OPTIONS.en_ligne ? "" : '<button class="btn second" id="b-dossier">Ouvrir le dossier</button>'}</div></div>`;
+
+  if (travail) {
+    h += `<section class="bloc"><h3>${travail.type === "clip" ? "Fabrication du clip" : "Fabrication de la chanson"} — ${echapper(travail.etat)}</h3>
+      ${actif ? '<div class="progression"><i></i></div>' : ""}
+      <pre class="journal" id="journal">${echapper(travail.journal.join("\n")) || "En attente du studio…"}</pre></section>`;
+  } else if (!c.versions) {
+    h += `<section class="bloc"><p class="meta">Cette commande n'a pas de travail en cours (le studio a peut-être été redémarré). Statut : ${echapper(c.statut)}</p></section>`;
+  }
+
+  if (c.versions) {
+    h += `<section class="bloc"><h3>Versions de la chanson</h3><div class="versions">` +
+      c.versions.map(v => `<div class="version">
+        <label class="choix"><input type="radio" name="version" value="${v.numero}" ${v.numero === (c.version_choisie || 1) ? "checked" : ""}> Version ${v.numero}</label>
+        <audio controls preload="none" src="${lienFichier(v.mp3)}"></audio>
+        <div class="liens"><a href="${lienFichier(v.extrait, 1)}">Extrait pour le client</a><a href="${lienFichier(v.mp3, 1)}">MP3 complet</a></div>
+      </div>`).join("") + `</div><p class="aide">Envoyez d'abord l'extrait (30 s avec un bip) au client. Après paiement, choisissez la version et fabriquez le clip.</p></section>`;
+
+    const ultra = c.formule === "Ultra";
+    const perf = OPTIONS.formules[c.formule] || {};
+    const vivant = (perf.plans_chantes || 0) + (perf.plans_danse || 0) > 0;
+    h += `<section class="bloc"><h3>Clip vidéo</h3>
+      <div class="depot">Photos du client — <strong>1 seule photo suffit</strong> ; 5 à 20 photos variées donnent un clip plus riche
+        <input type="file" id="photos" accept="image/*" multiple></div>
+      ${vivant ? `<div class="depot" style="margin-top:12px">Photo principale du chanteur / de la chanteuse : de face, bien éclairée, bouche et mains visibles, buste ou corps entier (facultatif, sinon les photos ci-dessus)
+        <input type="file" id="visage" accept="image/*"></div>
+      <div class="ligne" style="margin-top:12px">
+        <label class="choix"><input type="checkbox" id="avec_chant" checked> Le chanteur chante à l'écran (${perf.plans_chantes} plans, lèvres et gestes synchronisés)</label>
+        <label class="choix"><input type="checkbox" id="avec_danse" ${perf.plans_danse ? "checked" : "disabled"}> Il danse sur les passages musicaux (${perf.plans_danse} plans)</label>
+      </div>` : (ultra ? `<div class="depot" style="margin-top:12px">Photo du visage pour la synchro des lèvres (facultatif)
+        <input type="file" id="visage" accept="image/*"></div>` : "")}
+      <div class="ligne" style="margin-top:14px">
+        <div class="champ"><label for="look">Couleurs du clip</label><select id="look">${OPTIONS.looks.map(l => `<option ${l === (c.look || "Naturel") ? "selected" : ""}>${echapper(l)}</option>`).join("")}</select></div>
+        <div class="champ"><label for="description_clip">Description du clip (facultatif)</label>
+          <input type="text" id="description_clip" value="${echapper(c.description_clip || "")}" placeholder="ex. elle danse joyeusement, ambiance de fête, lumières dorées"></div>
+      </div>
+      <p class="aide">${c.formule === "Standard" ? "Formule Standard : photos animées par zooms, mouvements et flashs calés sur le rythme." :
+        "Le clip mélange des plans où la personne chante et danse (fabriqués par l'IA à partir de ses photos) et des plans montés sur le rythme. Comptez environ 3 à 5 minutes par plan vivant. La description (en anglais de préférence) guide l'ambiance."}</p>
+      <div style="margin-top:14px;display:flex;gap:14px;align-items:center">
+        <button class="btn" id="b-clip" ${actif ? "disabled" : ""}>Fabriquer le clip avec la version choisie</button>
+        <span id="msg-clip" role="status"></span></div></section>`;
+  }
+
+  if (c.livrables && c.livrables.length) {
+    const videos = c.livrables.filter(f => f.endsWith(".mp4"));
+    h += `<section class="bloc"><h3>Livraison</h3>
+      ${videos.length ? `<video controls preload="metadata" src="${lienFichier(videos[0])}"></video>` : ""}
+      <div class="liens" style="margin-top:14px">${c.livrables.map(f => `<a href="${lienFichier(f, 1)}">${echapper(nomFichier(f))}</a>`).join("")}
+      ${c.archive ? `<a href="${lienFichier(c.archive, 1)}"><strong>Tout télécharger (.zip) pour l'envoyer au client</strong></a>` : ""}</div>
+      ${OPTIONS.en_ligne ? '<p class="aide">Téléchargez le .zip sur votre téléphone ou votre PC avant de fermer le studio : la version en ligne repart à zéro à chaque ouverture.</p>' : ""}</section>`;
+  }
+  $("#detail").innerHTML = h;
+  const j = $("#journal"); if (j) j.scrollTop = j.scrollHeight;
+
+  $("#b-paye").onclick = async () => { await api(`/api/commandes/${encodeURIComponent(id)}/paye`, { method: "POST" }); ouvrirDetail(id); };
+  if ($("#b-dossier")) $("#b-dossier").onclick = () => api(`/api/commandes/${encodeURIComponent(id)}/ouvrir`, { method: "POST" });
+  const bc = $("#b-clip");
+  if (bc) bc.onclick = async () => {
+    const photos = $("#photos").files, m = $("#msg-clip");
+    if (!photos.length) { m.className = "erreur"; m.textContent = "Ajoutez au moins une photo."; return; }
+    const d = new FormData();
+    d.set("version", document.querySelector("input[name=version]:checked").value);
+    [...photos].forEach(p => d.append("photos", p));
+    d.set("look", $("#look").value);
+    d.set("description_clip", $("#description_clip").value);
+    if ($("#visage") && $("#visage").files.length) d.append("visage", $("#visage").files[0]);
+    if ($("#avec_chant")) d.set("avec_chant", $("#avec_chant").checked ? "oui" : "non");
+    if ($("#avec_danse")) d.set("avec_danse", $("#avec_danse").checked ? "oui" : "non");
+    bc.disabled = true; m.className = ""; m.textContent = "Envoi des photos…";
+    try { await api(`/api/commandes/${encodeURIComponent(id)}/clip`, { method: "POST", body: d }); ouvrirDetail(id); }
+    catch (e) { m.className = "erreur"; m.textContent = e.message; bc.disabled = false; }
+  };
+  if (actif) suivi = setTimeout(() => { if (!$("#vue-detail").hidden) ouvrirDetail(id); }, 4000);
+}
+
+$("#b-fermer").onclick = async () => {
+  if (!confirm(OPTIONS.en_ligne ? "Fermer le studio ? Pensez à télécharger les livraisons avant : le studio en ligne s'efface à la fermeture." : "Fermer le studio ? Le moteur musical s'arrête aussi.")) return;
+  try {
+    await api("/api/arreter", { method: "POST" });
+    document.body.innerHTML = OPTIONS.en_ligne
+      ? '<div class="ferme"><div><h1>Studio fermé</h1><p>La carte graphique en ligne est libérée (vos heures gratuites sont économisées). Pour revenir : rouvrez votre page « Bonheur Music Studio » et cliquez sur « Allumer le studio ».</p></div></div>'
+      : '<div class="ferme"><div><h1>Studio fermé</h1><p>Vous pouvez fermer cet onglet. Pour le rouvrir : double-cliquez sur « DEMARRER.bat » ou sur le raccourci du Bureau.</p></div></div>';
+  } catch (e) { alert(e.message); }
+};
+
+init().catch(e => { $("#etat").textContent = e.message; });
+</script>
+</body>
+</html>

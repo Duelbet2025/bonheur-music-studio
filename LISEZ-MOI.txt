@@ -1,0 +1,134 @@
+BONHEUR MUSIC STUDIO — Guide d'utilisation
+==========================================
+
+Votre studio privé pour créer des chansons et des clips par IA pour vos clients.
+Il fonctionne uniquement sur votre PC : personne d'autre ne peut y accéder.
+Tous les outils utilisés sont gratuits et autorisent l'usage commercial.
+
+
+1. LANCER LE STUDIO : UN SEUL FICHIER
+-------------------------------------
+Double-cliquez sur « DEMARRER.bat ». C'est tout.
+
+- La toute première fois, il installe tout automatiquement (1 à 3 heures selon
+  votre connexion). Laissez la fenêtre ouverte. Si internet coupe, relancez
+  DEMARRER.bat : l'installation reprend où elle s'était arrêtée.
+- À la fin, il propose de créer un raccourci « Bonheur Music Studio » sur le
+  Bureau (répondez O pour oui). Ensuite, lancez le studio depuis ce raccourci.
+- Le studio s'ouvre dans votre navigateur. Pas de fenêtre noire à garder ouverte.
+- Pour l'arrêter : bouton « Fermer le studio » en haut à droite.
+  (Si vous fermez juste l'onglet, le studio reste allumé : double-cliquez à
+  nouveau sur le raccourci pour retrouver la page.)
+- Au tout premier lancement, le moteur musical télécharge ses modèles
+  (quelques Go). Le voyant affiche la progression ; attendez qu'il soit vert
+  (« Composition prête ») avant de passer une commande.
+
+
+2. CE QU'IL FAUT
+----------------
+- Windows 10 ou 11
+- Une carte graphique NVIDIA. Ce que le studio installe dépend de sa mémoire :
+    moins de 6 Go  : chansons + clips (photos animées par zooms et effets)
+    6 à 11 Go      : + le visage du client chante (lèvres synchronisées, Ultra)
+    12 Go et plus  : + photos réellement animées par l'IA (Pro et Ultra)
+  Pour voir la mémoire de votre carte : Gestionnaire des tâches > Performances > GPU
+- Espace disque : 40 Go minimum, 90 Go avec tous les modules vidéo
+- 16 Go de mémoire vive (RAM) minimum, 32 Go conseillés pour l'animation IA
+
+Tout s'installe DANS ce dossier. Rien n'est mis ailleurs (sauf le raccourci du
+Bureau si vous l'acceptez). Pour tout désinstaller, supprimez le dossier.
+
+
+3. UTILISATION
+--------------
+Étape 1 — Nouvelle commande
+  - Choisissez la formule (Standard, Pro ou Ultra) selon ce que le client a payé.
+  - Remplissez : nom du client, titre, style, ambiance, tempo, durée, instruments.
+  - Collez les paroles avec [Couplet], [Refrain], [Pont]…
+    (ou laissez vide : l'IA écrit les paroles)
+  - Ajoutez la voix du client : 5 à 10 minutes de chant, sans musique derrière.
+    Les notes vocales WhatsApp fonctionnent.
+  - Cliquez « Composer la chanson ».
+
+  La première fois pour un client, l'IA apprend sa voix (20 à 90 min).
+  Pour ses commandes suivantes, cochez « Ce client est déjà venu ».
+
+Étape 2 — Écouter et envoyer l'extrait
+  Dans « Commandes », ouvrez la commande. Écoutez les versions.
+  Envoyez au client l'« Extrait » (30 secondes avec un petit bip).
+
+Étape 3 — Le clip
+  Après paiement, choisissez la version préférée et ajoutez 8 à 20 photos.
+  - Couleurs du clip : naturel, doré (mariage), néon (soirée), vintage, noir et
+    blanc…
+  - Description du clip : décrivez ce que l'IA doit faire bouger, en anglais si
+    possible (ex. « she dances happily, golden lights »).
+  - Ultra : ajoutez une photo du visage DE FACE, bien éclairée, bouche visible.
+    C'est elle qui « chante » dans le clip.
+  Cliquez « Fabriquer le clip ». Les photos changent exactement sur le rythme.
+
+Étape 4 — Livraison
+  Cliquez « Tout télécharger (.zip) » ou « Ouvrir le dossier » et envoyez les
+  fichiers au client (WhatsApp, Google Drive, WeTransfer…).
+
+
+4. CE QUE CONTIENT CHAQUE FORMULE
+---------------------------------
+STANDARD : 1 version (~2 min 30), voix du client, clip diaporama rythmé 16:9.
+PRO      : chanson complète, 3 versions au choix, clip dynamique en 16:9
+           (YouTube) + 9:16 (TikTok, Reels, Statut WhatsApp), 4 photos animées
+           par l'IA*, pochette d'album, version instrumentale.
+ULTRA    : tout le Pro + 4 versions, 8 photos animées par l'IA*, le visage du
+           client qui chante sur les passages chantés*, paroles karaoké, format
+           carré 1:1, pistes séparées (voix, batterie, basse, instruments).
+
+* Seulement si la carte graphique le permet (voir partie 2). Sinon le clip est
+  fait automatiquement sans : rien n'est bloqué.
+
+Durée du clip : de 10 minutes (Standard) à 1 heure ou plus (Ultra avec
+animation IA). Lancez-le et faites autre chose : le journal montre l'avancée.
+
+Les réglages des formules sont dans « studio\config.py » (durées, nombre de
+versions, nombre de photos animées, etc.).
+
+
+5. CONSEILS POUR DE MEILLEURS RÉSULTATS
+---------------------------------------
+- Voix du client : enregistrée au calme, téléphone à 20 cm de la bouche, sans
+  musique. Idéalement il chante (pas seulement parle).
+- Voix trop aiguë ou trop grave : refaites la commande en ajustant la hauteur.
+- Générez plusieurs versions (Pro/Ultra) : l'IA ne réussit pas tout du premier
+  coup, c'est normal. Gardez la meilleure.
+- Coupé-décalé, zouglou : ces styles sont moins connus de l'IA. Ajoutez des
+  détails (« rolling percussion, festive Ivorian party ») si besoin.
+- Photos : nettes, variées (visage, plein pied, décors). L'animation IA marche
+  mieux avec une seule personne bien visible.
+
+
+6. RÈGLES IMPORTANTES
+---------------------
+- N'utilisez que la voix et le visage du client lui-même, avec son accord.
+  Ne jamais imiter la voix ou le visage d'une autre personne sans autorisation.
+- Chaque fichier porte la mention « Créé avec l'intelligence artificielle » :
+  c'est obligatoire si vous vendez vers l'Europe.
+
+
+7. EN CAS DE PROBLÈME
+---------------------
+- Voyant « Composition » rouge longtemps : premier téléchargement en cours, ou
+  problème. Le détail est dans « logs\moteur_musical.log ».
+- Erreur dans une commande : détail complet dans « commandes\erreurs.log ».
+- Un module vidéo n'a pas pu s'installer : voir « logs\installation_*.log ».
+  Pour réessayer : supprimez « installation\INSTALLE.txt » puis relancez
+  DEMARRER.bat (ce qui est déjà installé n'est pas refait).
+- Mémoire de la carte insuffisante : durée plus courte ou formule inférieure.
+
+
+Moteurs utilisés (gratuits, usage commercial autorisé) :
+- ACE-Step 1.5 (licence MIT) — composition de la musique et du chant
+- Applio / RVC (licence MIT) — voix du client
+- Demucs (licence MIT) — séparation voix / musique
+- faster-whisper (licence MIT) — synchronisation des paroles
+- Wan 2.2 TI2V-5B (licence Apache 2.0) — animation IA des photos
+- MuseTalk 1.5 (licence MIT, modèles utilisables commercialement) — lèvres
+- FFmpeg — montage vidéo et audio
