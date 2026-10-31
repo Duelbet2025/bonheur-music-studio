@@ -253,6 +253,11 @@ async function api(url, options) {
 async function verifierEtat() {
   try {
     const e = await api("/api/etat");
+    if (e.veille) {  // studio en veille : on arrête de l'appeler pour qu'il puisse s'éteindre (économie)
+      clearInterval(window.__suiviEtat);
+      $("#etat").innerHTML = '<span>Studio en veille pour économiser. <a href="/" style="color:inherit;text-decoration:underline">Cliquez ici pour le réveiller</a>.</span>';
+      return;
+    }
     const v = (ok, t) => `<span><i class="voyant ${ok ? "ok" : ""}"></i>${t}</span>`;
     $("#etat").innerHTML =
       v(e.musique, e.musique ? "Composition prête" : "Moteur musical en démarrage" + (e.musique_detail ? " : " + echapper(e.musique_detail) : "…")) +
@@ -288,7 +293,7 @@ async function init() {
   ["bpm", "duree", "transposition"].forEach(id => $("#" + id).oninput = majValeurs);
   $("#voix_ia").onchange = $("#reutiliser_voix").onchange = majValeurs;
   $("#style").onchange();
-  verifierEtat(); setInterval(verifierEtat, 8000);
+  verifierEtat(); window.__suiviEtat = setInterval(verifierEtat, 8000);
 }
 
 function majValeurs() {

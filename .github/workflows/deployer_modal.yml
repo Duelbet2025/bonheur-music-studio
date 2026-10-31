@@ -1,0 +1,49 @@
+name: Déployer le studio sur Modal
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: ["studio/**", "en_ligne/**", ".github/workflows/deployer_modal.yml"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploiement-modal
+  cancel-in-progress: false
+
+jobs:
+  deployer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+      BMS_CLE: ${{ secrets.BMS_CLE }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Outils Modal
+        run: pip install -q modal
+      - name: Clé privée du studio
+        run: modal secret create bms BMS_CLE="$BMS_CLE" --force
+      - name: Déploiement (la 1re fois, construction des moteurs ≈ 30 min)
+        run: |
+          set -o pipefail
+          modal deploy en_ligne/modal_app.py 2>&1 | tee deploiement.log
+      - name: Journal du déploiement (branche « journaux »)
+        if: always()
+        run: |
+          tail -c 60000 deploiement.log > /tmp/dernier_deploiement.log 2>/dev/null || echo "pas de journal" > /tmp/dernier_deploiement.log
+          git config user.name "studio-bot"
+          git config user.email "studio-bot@users.noreply.github.com"
+          git fetch origin journaux 2>/dev/null && git checkout -B journaux origin/journaux 2>/dev/null || git checkout --orphan journaux
+          git rm -rq --cached . 2>/dev/null || true
+          cp /tmp/dernier_deploiement.log dernier_deploiement.log
+          echo "${{ job.status }} $(date -u +%FT%TZ) ${{ github.sha }}" > statut.txt
+          git add dernier_deploiement.log statut.txt
+          git commit -qm "Journal du déploiement ${{ github.sha }}" || true
+          git push -q origin journaux

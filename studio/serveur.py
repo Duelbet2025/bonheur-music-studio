@@ -34,7 +34,9 @@ from config import (AMBIANCES, DOSSIER_APPLIO, DOSSIER_COMMANDES, FORMULES, INST
 PORT = int(os.environ.get("BMS_PORT", 7870))
 EN_LIGNE = os.environ.get("BMS_EN_LIGNE") == "1"
 CLE = os.environ.get("BMS_CLE", "")
-INACTIVITE_MAX = int(os.environ.get("BMS_INACTIVITE_MAX", 50 * 60))  # en ligne : arrêt après 50 min sans rien
+INACTIVITE_MAX = int(os.environ.get("BMS_INACTIVITE_MAX", 50 * 60))  # en ligne : arrêt après 50 min sans rien (0 = jamais)
+VEILLE = int(os.environ.get("BMS_VEILLE", 0))  # Modal : la page arrête de « sonner » après ce délai sans action
+HOTE_PUBLIC = [None]
 DERNIERE_ACTIVITE = [time.time()]
 ICI = Path(__file__).resolve().parent
 app = Flask(__name__, static_folder=None)
@@ -118,7 +120,10 @@ PAGE_REFUSEE = """<!doctype html><meta charset="utf-8"><title>Bonheur Music Stud
 
 @app.before_request
 def controle_acces():
-    DERNIERE_ACTIVITE[0] = time.time()
+    if request.path != "/api/etat":  # la page qui vérifie l'état toutes les 8 s ne compte pas comme activité
+        DERNIERE_ACTIVITE[0] = time.time()
+    if request.headers.get("Host") and not HOTE_PUBLIC[0] and "127.0.0.1" not in request.headers["Host"]:
+        HOTE_PUBLIC[0] = request.headers["Host"]
     if not CLE:
         return None
     if request.args.get("cle") == CLE:
@@ -135,7 +140,14 @@ def _surveiller_inactivite():
         occupe = any(t["etat"] in ("en attente", "en cours") for t in TRAVAUX.values())
         if occupe:
             DERNIERE_ACTIVITE[0] = time.time()
-        elif time.time() - DERNIERE_ACTIVITE[0] > INACTIVITE_MAX:
+            if os.environ.get("BMS_MAINTIEN") == "1" and HOTE_PUBLIC[0]:
+                # Modal : un travail tourne, on garde la machine allumée même si la page est fermée
+                try:
+                    import requests as rq
+                    rq.get(f"https://{HOTE_PUBLIC[0]}/api/etat", cookies={"bms_cle": CLE}, timeout=20)
+                except Exception:
+                    pass
+        elif INACTIVITE_MAX and time.time() - DERNIERE_ACTIVITE[0] > INACTIVITE_MAX:
             print("Studio inactif depuis longtemps : arrêt automatique (économise les heures de carte graphique).",
                   flush=True)
             demarrage.arreter_moteur_musical()
@@ -198,6 +210,8 @@ def etat():
         "separation": demucs_ok,
         "gpu": gpu,
         "file": sum(1 for t in TRAVAUX.values() if t["etat"] in ("en attente", "en cours")),
+        "veille": bool(VEILLE) and time.time() - DERNIERE_ACTIVITE[0] > VEILLE and
+        not any(t["etat"] in ("en attente", "en cours") for t in TRAVAUX.values()),
     })
 
 
@@ -361,6 +375,6 @@ if __name__ == "__main__":
         threading.Timer(1.5, lambda: webbrowser.open(adresse)).start()
     print(f"\n  {NOM_STUDIO} est ouvert sur {adresse}\n", flush=True)
     try:
-        app.run(host="127.0.0.1", port=PORT, threaded=True)
+        app.run(host=os.environ.get("BMS_HOTE", "127.0.0.1"), port=PORT, threaded=True)
     finally:
         demarrage.arreter_moteur_musical()
