@@ -89,7 +89,7 @@ env = dict(os.environ, UV_CACHE_DIR=str(RACINE / "cache/uv"), UV_PYTHON_INSTALL_
 # ---------------------------------------------------------------- 3. outils système
 etape(3, TOTAL, "Outils système")
 lancer("apt-get update -qq && apt-get install -y -qq portaudio19-dev ffmpeg psmisc", "apt")
-lancer(f"{sys.executable} -m pip install -q --no-cache-dir uv faster-whisper flask requests", "pip_noyau")
+lancer(f"{sys.executable} -m pip install -q --no-cache-dir uv faster-whisper flask requests sentencepiece sacremoses", "pip_noyau")
 uv_dest = RACINE / "outils/uv/uv"
 uv_dest.parent.mkdir(parents=True, exist_ok=True)
 shutil.copy(shutil.which("uv") or Path(sys.executable).parent / "uv", uv_dest)
