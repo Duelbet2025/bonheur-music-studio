@@ -108,6 +108,7 @@ ace = RACINE / "moteurs/ACE-Step-1.5"
 if not (ace / "pyproject.toml").exists():
     lancer(f"git clone -q --depth 1 https://github.com/ace-step/ACE-Step-1.5.git {ace}", "acestep_git")
 lancer(f"{UV} sync -q", "acestep_sync", cwd=ace, env=env)
+subprocess.run([sys.executable, str(CODE / "en_ligne/correctifs_acestep.py"), str(ace)])  # float32 sur T4
 
 # ---------------------------------------------------------------- 5. voix
 etape(5, TOTAL, "Moteur de voix (Applio)")
