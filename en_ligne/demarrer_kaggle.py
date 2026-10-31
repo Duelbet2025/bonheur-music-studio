@@ -18,11 +18,20 @@ from pathlib import Path
 CODE = Path(BMS_CODE)          # noqa: F821  (dossier du dépôt, fourni par la cellule)
 CLE = BMS_CLE                  # noqa: F821
 CANAL = BMS_CANAL              # noqa: F821
-RACINE = Path("/kaggle/tmp/bms") if Path("/kaggle").exists() else Path("/tmp/bms")
+# Kaggle : disque effacé à chaque session. Lightning AI : disque gardé (on n'installe qu'une fois).
+LIGHTNING = Path("/teamspace/studios/this_studio").exists()
+if os.environ.get("BMS_RACINE"):
+    RACINE = Path(os.environ["BMS_RACINE"])
+elif Path("/kaggle").exists():
+    RACINE = Path("/kaggle/tmp/bms")
+elif LIGHTNING:
+    RACINE = Path("/teamspace/studios/this_studio/bms")
+else:
+    RACINE = Path("/tmp/bms")
 SORTIES = Path("/kaggle/working") if Path("/kaggle/working").exists() else RACINE / "sorties"
 LOGS = RACINE / "logs"
 DEBUT = time.time()
-DUREE_MAX = 11 * 3600 + 40 * 60  # Kaggle coupe à 12 h
+DUREE_MAX = (3 * 3600 + 45 * 60) if LIGHTNING else (11 * 3600 + 40 * 60)  # Lightning gratuit : 4 h ; Kaggle : 12 h
 CU128 = "https://download.pytorch.org/whl/cu128"
 for d in (RACINE, LOGS, SORTIES):
     d.mkdir(parents=True, exist_ok=True)
@@ -88,7 +97,9 @@ env = dict(os.environ, UV_CACHE_DIR=str(RACINE / "cache/uv"), UV_PYTHON_INSTALL_
 
 # ---------------------------------------------------------------- 3. outils système
 etape(3, TOTAL, "Outils système")
-lancer("apt-get update -qq && apt-get install -y -qq portaudio19-dev ffmpeg psmisc", "apt")
+SUDO = "" if os.geteuid() == 0 else "sudo -n "
+if not (shutil.which("ffmpeg") and Path("/usr/include/portaudio.h").exists()):
+    lancer(f"{SUDO}apt-get update -qq && {SUDO}apt-get install -y -qq portaudio19-dev ffmpeg psmisc", "apt")
 lancer(f"{sys.executable} -m pip install -q --no-cache-dir uv faster-whisper flask requests sentencepiece sacremoses", "pip_noyau")
 uv_dest = RACINE / "outils/uv/uv"
 uv_dest.parent.mkdir(parents=True, exist_ok=True)
