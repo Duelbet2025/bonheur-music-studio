@@ -272,7 +272,8 @@ def _clip_suite(dossier, fiche, formule, version, livraison, final, photos_copie
                 prompt += " " + description_clip
             taches.append({"cle": k, "image": image, "audio": audio, "prompt": prompt, "graine": 43 + n})
         delai = 3600 * (2 if fiche["formule"] == "Ultra" else 1)  # au-delà : photos pour le reste
-        faits = video_ia.generer_performances(taches, atelier / "performance", journal, delai_max=delai)
+        faits = video_ia.generer_performances(taches, atelier / "performance", journal, delai_max=delai,
+                                              deux_cartes=_memoire_totale_go() < 48)
         levres = dict(faits)
         journal(f"{sum(1 for k in faits if choix[k] == 'chant')} plan(s) chanté(s) et "
                 f"{sum(1 for k in faits if choix[k] == 'danse')} plan(s) dansé(s) prêts.")

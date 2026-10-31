@@ -71,7 +71,7 @@ def generer_decors(taches, dossier: Path, journal=print):
     return [Path(l["sortie"]) for l in liste if Path(l["sortie"]).exists()]
 
 
-def generer_performances(taches, dossier: Path, journal=print, delai_max=None):
+def generer_performances(taches, dossier: Path, journal=print, delai_max=None, deux_cartes=False):
     """Fabrique les plans où la personne chante ou danse.
 
     taches : liste de dicts {cle, image, audio, prompt, graine}. Retourne {cle: vidéo mp4 sans son}.
@@ -91,10 +91,44 @@ def generer_performances(taches, dossier: Path, journal=print, delai_max=None):
     fichier.write_text(json.dumps({"modeles": modeles, "taches": liste}, ensure_ascii=False), encoding="utf-8")
     journal(f"Le chanteur prend vie : {len(liste)} plan(s) chantés / dansés par l'IA "
             f"(quelques minutes par plan)…")
-    code, derniers = _executer([_python_echomimic(), SCRIPT_PERFORMANCE, fichier], DOSSIER_ECHOMIMIC, journal)
-    if code != 0:
-        journal("Moteur de performance arrêté (" + (derniers[-1] if derniers else "erreur") +
-                ") : les plans manquants sont faits avec les photos.")
+    cartes = deux_cartes and len(liste) >= 4 and os.environ.get("BMS_GPU_MUSIQUE") is not None
+    if cartes:
+        # Kaggle a 2 cartes : quand le moteur musical est en pause, chacune fait la moitié des plans
+        journal("Les 2 cartes graphiques travaillent en parallèle (2 fois plus rapide).")
+        moities = [liste[0::2], liste[1::2]]
+        procs = []
+        for n, (carte, part) in enumerate(zip(("0", "1"), moities)):
+            f = dossier / f"taches_performance_{n}.json"
+            f.write_text(json.dumps({"modeles": modeles, "taches": part}, ensure_ascii=False), encoding="utf-8")
+            env = {**_environnement(), "CUDA_VISIBLE_DEVICES": carte}
+            proc = subprocess.Popen([str(_python_echomimic()), str(SCRIPT_PERFORMANCE), str(f)],
+                                    cwd=DOSSIER_ECHOMIMIC, env=env, stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace")
+            procs.append(proc)
+            if n == 0:  # on attend que le 1er ait fini de charger (mémoire vive limitée) avant le 2e
+                for ligne in proc.stdout:
+                    if any(m in ligne for m in ("PROGRES", "OK", "ECHEC")):
+                        journal(f"   [carte {carte}] " + ligne.strip()[:170])
+                    if "Modèle prêt" in ligne or proc.poll() is not None:
+                        break
+        import threading
+
+        def lire(proc, carte):
+            for ligne in proc.stdout:
+                if any(m in ligne for m in ("PROGRES", "OK", "ECHEC")):
+                    journal(f"   [carte {carte}] " + ligne.strip()[:170])
+        fils = [threading.Thread(target=lire, args=(pr, c)) for pr, c in zip(procs, ("0", "1"))]
+        for f_ in fils:
+            f_.start()
+        for f_ in fils:
+            f_.join()
+        for pr in procs:
+            pr.wait()
+    else:
+        code, derniers = _executer([_python_echomimic(), SCRIPT_PERFORMANCE, fichier], DOSSIER_ECHOMIMIC, journal)
+        if code != 0:
+            journal("Moteur de performance arrêté (" + (derniers[-1] if derniers else "erreur") +
+                    ") : les plans manquants sont faits avec les photos.")
     resultats = {}
     for t, l in zip(taches, liste):
         f = Path(l["sortie"])
