@@ -110,6 +110,7 @@ INSTRUMENTS = {
 }
 
 NIVEAUX_INSTRUMENT = {
+    "Auto": "",                 # le style décide (par défaut)
     "Absent": None,
     "Léger": "subtle {}",
     "Normal": "{}",

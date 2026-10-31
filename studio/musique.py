@@ -24,11 +24,12 @@ def construire_description(style, ambiance, instruments, voix_genre, description
     if ambiance in AMBIANCES:
         morceaux.append(AMBIANCES[ambiance])
     for nom, niveau in (instruments or {}).items():
-        modele = NIVEAUX_INSTRUMENT.get(niveau)
+        modele = NIVEAUX_INSTRUMENT.get(niveau, "")
         if modele and nom in INSTRUMENTS:
             morceaux.append(modele.format(INSTRUMENTS[nom]))
-    absents = [INSTRUMENTS[n] for n, niv in (instruments or {}).items()
-               if NIVEAUX_INSTRUMENT.get(niv) is None and n in INSTRUMENTS]
+    # « Absent » seulement si choisi exprès ; chaque instrument est nié séparément (« no djembe »…)
+    absents = [t.strip() for n, niv in (instruments or {}).items()
+               if niv == "Absent" and n in INSTRUMENTS for t in INSTRUMENTS[n].split(",")]
     if absents:
         morceaux.append("no " + ", no ".join(absents))
     morceaux.append("male lead vocals" if voix_genre == "Homme" else "female lead vocals")
@@ -122,9 +123,13 @@ def generer_chansons(*, description, paroles, langue, bpm, duree, versions,
         "audio_format": "wav",
         "use_random_seed": True,
     }
-    if not base["lyrics"]:
-        journal("Écriture des paroles par l'IA…")
-        base["lyrics"] = ecrire_paroles(sujet or description, langue)
+    import re
+    texte_seul = re.sub(r"\[[^\]]*\]", " ", base["lyrics"]).strip()
+    if len(texte_seul) < 80:
+        # pas de paroles, ou juste quelques mots : l'IA écrit une vraie chanson sur ce thème
+        theme = f" Theme of the song: {texte_seul}." if texte_seul else ""
+        journal("Écriture des paroles par l'IA" + (f" sur le thème « {texte_seul} »…" if texte_seul else "…"))
+        base["lyrics"] = ecrire_paroles((sujet or description) + theme, langue)
     base = {k: v for k, v in base.items() if v is not None}
 
     dossier_sortie.mkdir(parents=True, exist_ok=True)

@@ -282,7 +282,7 @@ async function init() {
   $("#instruments").innerHTML = OPTIONS.instruments.map((n, i) => `
     <div class="instr"><span>${echapper(n)}</span>
       <select data-instr="${echapper(n)}" aria-label="${echapper(n)}">${OPTIONS.niveaux.map(v =>
-        `<option ${v === (i < 2 ? "Normal" : "Absent") ? "selected" : ""}>${v}</option>`).join("")}</select></div>`).join("");
+        `<option value="${v}" ${v === "Auto" ? "selected" : ""}>${v === "Auto" ? "Auto (le style décide)" : v}</option>`).join("")}</select></div>`).join("");
   $("#style").onchange = () => { $("#bpm").value = OPTIONS.styles[$("#style").value]; majValeurs(); };
   document.querySelectorAll("input[name=formule]").forEach(r => r.onchange = majValeurs);
   ["bpm", "duree", "transposition"].forEach(id => $("#" + id).oninput = majValeurs);
