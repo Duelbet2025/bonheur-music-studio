@@ -62,48 +62,29 @@ def ecrire_paroles(sujet: str, langue: str) -> str:
     return paroles
 
 
-def generer_chansons(*, description, paroles, langue, bpm, duree, versions,
-                     dossier_sortie: Path, journal=print, delai_max=1800, sujet=""):
-    """Envoie la commande à ACE-Step et télécharge les versions générées.
+def _fin_journal_moteur(n=12):
+    """Lignes utiles de la fin du journal du moteur musical (pour comprendre une erreur)."""
+    try:
+        from demarrage import JOURNAL_MOTEUR
+        lignes = JOURNAL_MOTEUR.read_text(encoding="utf-8", errors="replace").splitlines()
+    except Exception:
+        return ""
+    utiles = [l for l in lignes if any(m in l for m in ("Error", "error", "Exception", "OOM", "out of memory",
+                                                        "NaN", "Traceback", "failed", "Killed"))]
+    return "\n".join((utiles or lignes)[-n:])[-1500:]
 
-    Retourne la liste des fichiers .wav créés.
-    """
-    if not serveur_pret():
-        raise ErreurMusique(
-            "Le moteur musical ACE-Step n'est pas démarré. "
-            "Lancez l'application avec « lancer_studio.bat »."
-        )
 
-    demande = {
-        "prompt": description,
-        "lyrics": paroles.strip() if paroles else "",
-        "vocal_language": langue,
-        "bpm": int(bpm) if bpm else None,
-        "audio_duration": float(duree),
-        "batch_size": int(versions),
-        "thinking": True,
-        "audio_format": "wav",
-        "use_random_seed": True,
-    }
-    if not demande["lyrics"]:
-        # Pas de paroles : l'IA les écrit d'abord, puis on garde le tempo et la durée choisis.
-        journal("Écriture des paroles par l'IA…")
-        demande["lyrics"] = ecrire_paroles(sujet or description, langue)
-    demande = {k: v for k, v in demande.items() if v is not None}
-
-    journal(f"Envoi au moteur musical ({versions} version(s), {int(duree)} s)…")
+def _une_generation(demande, journal, delai_max, etiquette):
     rep = requests.post(f"{URL_ACESTEP}/release_task", json=demande, timeout=60)
     rep.raise_for_status()
     corps = rep.json()
     if corps.get("code") != 200 or not corps.get("data"):
         raise ErreurMusique(f"Refus du moteur musical : {corps.get('error')}")
     id_tache = corps["data"]["task_id"]
-
-    debut = time.time()
+    debut, dernier = time.time(), 0
     while True:
         time.sleep(4)
-        rep = requests.post(f"{URL_ACESTEP}/query_result",
-                            json={"task_id_list": [id_tache]}, timeout=60)
+        rep = requests.post(f"{URL_ACESTEP}/query_result", json={"task_id_list": [id_tache]}, timeout=60)
         rep.raise_for_status()
         entrees = rep.json().get("data") or []
         if not entrees:
@@ -111,32 +92,75 @@ def generer_chansons(*, description, paroles, langue, bpm, duree, versions,
         entree = entrees[0]
         statut = entree.get("status")
         if statut == 1:
-            break
+            return _extraire_resultats(entree)
         if statut == 2:
-            raise ErreurMusique(f"La génération a échoué : {entree.get('result')}")
+            raise ErreurMusique("échec du moteur musical. " + (_fin_journal_moteur() or str(entree.get("result"))[:300]))
         if time.time() - debut > delai_max:
-            raise ErreurMusique("La génération prend trop de temps (plus de 30 min).")
-        journal(f"Composition en cours… {int(time.time() - debut)} s")
+            raise ErreurMusique(f"la composition dépasse {delai_max // 60} min.")
+        if time.time() - dernier > 30:  # journal plus léger : une ligne toutes les 30 s
+            journal(f"{etiquette} : composition en cours… {int(time.time() - debut)} s")
+            dernier = time.time()
+
+
+def generer_chansons(*, description, paroles, langue, bpm, duree, versions,
+                     dossier_sortie: Path, journal=print, delai_max=2400, sujet=""):
+    """Compose les versions une par une (moins de mémoire, et une version ratée n'annule pas les autres).
+
+    Retourne (liste des fichiers .wav, liste des paroles).
+    """
+    if not serveur_pret():
+        raise ErreurMusique("Le moteur musical n'est pas encore démarré : attendez que son voyant soit vert.")
+
+    base = {
+        "prompt": description,
+        "lyrics": paroles.strip() if paroles else "",
+        "vocal_language": langue,
+        "bpm": int(bpm) if bpm else None,
+        "audio_duration": float(duree),
+        "batch_size": 1,
+        "thinking": True,
+        "audio_format": "wav",
+        "use_random_seed": True,
+    }
+    if not base["lyrics"]:
+        journal("Écriture des paroles par l'IA…")
+        base["lyrics"] = ecrire_paroles(sujet or description, langue)
+    base = {k: v for k, v in base.items() if v is not None}
 
     dossier_sortie.mkdir(parents=True, exist_ok=True)
-    fichiers, paroles_finales = [], []
-    for i, res in enumerate(_extraire_resultats(entree), start=1):
-        lien = res.get("file")
-        if not lien:
-            continue
-        if not lien.startswith("http"):
-            lien = f"{URL_ACESTEP}{lien}"  # le serveur encode déjà le chemin
-        audio = requests.get(lien, timeout=300)
-        audio.raise_for_status()
-        cible = dossier_sortie / f"version_{i}_ia.wav"
-        cible.write_bytes(audio.content)
-        fichiers.append(cible)
-        paroles_finales.append(res.get("lyrics") or demande.get("lyrics", ""))
-        meta = res.get("metas") or {}
-        (dossier_sortie / f"version_{i}_infos.json").write_text(
-            json.dumps({"metas": meta, "paroles": res.get("lyrics"), "graine": res.get("seed_value")},
-                       ensure_ascii=False, indent=2), encoding="utf-8")
+    fichiers, paroles_finales, erreurs = [], [], []
+    for v in range(1, int(versions) + 1):
+        etiquette = f"Version {v}/{versions}"
+        journal(f"{etiquette} : envoi au moteur musical ({int(duree)} s)…")
+        resultats = None
+        for essai, reglage in enumerate(({}, {"thinking": False})):
+            try:
+                resultats = _une_generation({**base, **reglage}, journal, delai_max, etiquette)
+                break
+            except (ErreurMusique, requests.RequestException) as e:
+                erreurs.append(f"{etiquette} : {e}")
+                journal(f"{etiquette} : {e}")
+                if essai == 0:
+                    journal(f"{etiquette} : nouvel essai en mode rapide…")
+        for res in resultats or []:
+            lien = res.get("file")
+            if not lien:
+                continue
+            if not lien.startswith("http"):
+                lien = f"{URL_ACESTEP}{lien}"  # le serveur encode déjà le chemin
+            audio = requests.get(lien, timeout=300)
+            audio.raise_for_status()
+            n = len(fichiers) + 1
+            cible = dossier_sortie / f"version_{n}_ia.wav"
+            cible.write_bytes(audio.content)
+            fichiers.append(cible)
+            paroles_finales.append(res.get("lyrics") or base.get("lyrics", ""))
+            (dossier_sortie / f"version_{n}_infos.json").write_text(
+                json.dumps({"metas": res.get("metas") or {}, "paroles": res.get("lyrics"),
+                            "graine": res.get("seed_value")}, ensure_ascii=False, indent=2), encoding="utf-8")
+            journal(f"{etiquette} composée.")
+            break
     if not fichiers:
-        raise ErreurMusique("Le moteur n'a renvoyé aucun fichier audio.")
+        raise ErreurMusique("Aucune version n'a pu être composée. " + (erreurs[-1] if erreurs else ""))
     journal(f"{len(fichiers)} version(s) composée(s).")
     return fichiers, paroles_finales

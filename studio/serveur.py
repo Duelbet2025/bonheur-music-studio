@@ -177,11 +177,15 @@ def etat():
             gpu = r.stdout.strip().splitlines()[0]
     except Exception:
         pass
-    try:
-        import demucs  # noqa: F401
-        demucs_ok = True
-    except ImportError:
-        demucs_ok = False
+    sep = os.environ.get("BMS_PYTHON_SEPARATION")
+    if sep:
+        demucs_ok = Path(sep).exists()
+    else:
+        try:
+            import demucs  # noqa: F401
+            demucs_ok = True
+        except ImportError:
+            demucs_ok = False
     pret = musique.serveur_pret()
     return jsonify({
         "musique": pret,
@@ -203,6 +207,20 @@ def _etat_performance():
         return f.read_text(encoding="utf-8").strip()[-160:]
     except OSError:
         return ""
+
+
+@app.get("/api/journaux")
+def journaux():
+    """Fin des journaux techniques (pour diagnostiquer une erreur)."""
+    from config import RACINE
+    sortie = {}
+    for f in sorted((RACINE / "logs").glob("*.log")) + sorted((RACINE / "moteurs").glob("*.log")) + \
+            [DOSSIER_COMMANDES / "erreurs.log"]:
+        try:
+            sortie[f.name] = f.read_text(encoding="utf-8", errors="replace")[-int(request.args.get("n", 4000)):]
+        except OSError:
+            pass
+    return jsonify(sortie)
 
 
 @app.get("/api/commandes")

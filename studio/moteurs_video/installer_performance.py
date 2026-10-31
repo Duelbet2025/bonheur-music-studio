@@ -27,6 +27,7 @@ NOMS = {"cv2": "opencv-python-headless", "PIL": "pillow", "skimage": "scikit-ima
 
 def main(dossier, fichier_etat, uv):
     dossier, fichier_etat = Path(dossier), Path(fichier_etat)
+    dossier.parent.mkdir(parents=True, exist_ok=True)
     journal = dossier.parent / "installation_performance.log"
 
     def etat(msg):
