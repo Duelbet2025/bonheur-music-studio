@@ -39,7 +39,7 @@ def environnement():
         env.setdefault("ACESTEP_OFFLOAD_TO_CPU", "true")       # float32 prend 2x plus de mémoire
         env.setdefault("ACESTEP_USE_FLASH_ATTENTION", "false") # non prise en charge avant 2020
         env.setdefault("ACESTEP_LM_BACKEND", "pt")             # moteur de texte standard (vllm exige une carte récente)
-        env.setdefault("ACESTEP_LM_MODEL_PATH", "acestep-5Hz-lm-0.6B")  # le plus léger, plus rapide
+        env.setdefault("ACESTEP_LM_MODEL_PATH", "acestep-5Hz-lm-1.7B")  # recommandé pour 16 Go : meilleure fidélité
     env.setdefault("UV_CACHE_DIR", str(RACINE / "cache" / "uv"))
     env.setdefault("UV_PYTHON_INSTALL_DIR", str(RACINE / "outils" / "python"))
     env.setdefault("HF_HOME", str(RACINE / "cache" / "huggingface"))

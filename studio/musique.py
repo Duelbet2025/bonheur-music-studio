@@ -18,9 +18,21 @@ def serveur_pret() -> bool:
         return False
 
 
-def construire_description(style, ambiance, instruments, voix_genre, description_libre=""):
-    """Assemble la description envoyée à l'IA à partir des choix du formulaire."""
-    morceaux = [STYLES[style]["tags"]]
+def construire_description(style, ambiance, instruments, voix_genre, description_libre="", avec_voix=True):
+    """Assemble la description (en anglais) envoyée à l'IA.
+
+    La demande du client passe en premier (c'est elle qui compte le plus), puis le style, l'ambiance,
+    les instruments réglés à la main, et une voix bien en avant.
+    """
+    import re
+    import texte
+    libre = texte.traduire_en(description_libre or "")
+    if avec_voix:  # « instrumental » dans la description ferait disparaître la voix
+        libre = re.sub(r"(?i)\binstrumentals?\b", "music", libre)
+    morceaux = []
+    if libre.strip():
+        morceaux.append(libre.strip().rstrip("."))
+    morceaux.append(STYLES[style]["tags"])
     if ambiance in AMBIANCES:
         morceaux.append(AMBIANCES[ambiance])
     for nom, niveau in (instruments or {}).items():
@@ -32,11 +44,11 @@ def construire_description(style, ambiance, instruments, voix_genre, description
                if niv == "Absent" and n in INSTRUMENTS for t in INSTRUMENTS[n].split(",")]
     if absents:
         morceaux.append("no " + ", no ".join(absents))
-    morceaux.append("male lead vocals" if voix_genre == "Homme" else "female lead vocals")
-    if description_libre.strip():
-        morceaux.append(description_libre.strip())
-    morceaux.append("high quality studio mix")
-    return ", ".join(morceaux)
+    if avec_voix:
+        genre = "male" if voix_genre == "Homme" else "female"
+        morceaux.append(f"powerful clear {genre} lead vocals upfront in the mix, intelligible lyrics")
+    morceaux.append("professional studio mix and master")
+    return ", ".join(morceaux)[:1200]
 
 
 def _extraire_resultats(entree):
@@ -122,6 +134,8 @@ def generer_chansons(*, description, paroles, langue, bpm, duree, versions,
         "thinking": True,
         "audio_format": "wav",
         "use_random_seed": True,
+        "use_cot_caption": False,   # garder exactement la description demandée (pas de réécriture par l'IA)
+        "lm_temperature": 0.8,
     }
     import re
     texte_seul = re.sub(r"\[[^\]]*\]", " ", base["lyrics"]).strip()

@@ -36,6 +36,41 @@ def performance_disponible() -> bool:
     return _python_echomimic() is not None and (DOSSIER_ECHOMIMIC / "PRET.json").exists()
 
 
+SCRIPT_DECORS = Path(__file__).resolve().parent / "moteurs_video" / "scenes.py"
+
+
+def decors_disponibles() -> bool:
+    if not performance_disponible():
+        return False
+    import json
+    try:
+        return "sdxl" in json.loads((DOSSIER_ECHOMIMIC / "PRET.json").read_text(encoding="utf-8"))
+    except Exception:
+        return False
+
+
+def generer_decors(taches, dossier: Path, journal=print):
+    """Crée les décors décrits et y place la personne. taches : [{scene, photo, graine}].
+
+    Retourne la liste des images composées (dans l'ordre des tâches, celles réussies).
+    """
+    if not taches or not decors_disponibles():
+        return []
+    import json
+    dossier.mkdir(parents=True, exist_ok=True)
+    modeles = json.loads((DOSSIER_ECHOMIMIC / "PRET.json").read_text(encoding="utf-8"))
+    liste = [{**{c: str(v) for c, v in t.items()}, "taille": [768, 1024],
+              "sortie": str((dossier / f"scene_{k:02d}.jpg").resolve()),
+              "sortie_decor": str((dossier / f"decor_{k:02d}.jpg").resolve())} for k, t in enumerate(taches)]
+    fichier = dossier / "taches_decors.json"
+    fichier.write_text(json.dumps({"modeles": modeles, "taches": liste}, ensure_ascii=False), encoding="utf-8")
+    journal(f"Création de {len(liste)} décor(s) d'après votre description…")
+    code, derniers = _executer([_python_echomimic(), SCRIPT_DECORS, fichier], DOSSIER_ECHOMIMIC, journal)
+    if code != 0:
+        journal("Créateur de décors arrêté (" + (derniers[-1] if derniers else "erreur") + ").")
+    return [Path(l["sortie"]) for l in liste if Path(l["sortie"]).exists()]
+
+
 def generer_performances(taches, dossier: Path, journal=print, delai_max=None):
     """Fabrique les plans où la personne chante ou danse.
 

@@ -16,7 +16,7 @@ from pathlib import Path
 DEPOT = "https://github.com/antgroup/echomimic_v3.git"
 VERSION = "7e89489ca51c0d008fc1963ec6c03fc5bd0b9397"  # version testée (janvier 2026)
 CU128 = "https://download.pytorch.org/whl/cu128"
-PAQUETS = ["diffusers==0.35.2", "transformers==4.57.1", "accelerate>=1.0", "omegaconf", "einops",
+PAQUETS = ["diffusers==0.32.2", "transformers==4.57.1", "accelerate>=1.0", "omegaconf", "einops",
            "safetensors", "librosa", "moviepy==2.2.1", "pyloudnorm", "imageio[ffmpeg]", "imageio[pyav]",
            "opencv-python-headless", "ftfy", "sentencepiece", "timm", "huggingface_hub>=0.30", "scipy",
            "scikit-image", "func_timeout", "tomesd", "torchdiffeq", "torchsde", "protobuf", "beautifulsoup4"]
@@ -105,7 +105,37 @@ print(json.dumps({{"base": str(base), "transformer": str(trans[0]), "wav2vec": s
         chemins = json.loads(r.stdout.strip().splitlines()[-1])
         etat("vérification (4/4)")
         (dossier / "PRET.json").write_text(json.dumps(chemins), encoding="utf-8")
-        etat("prêt")
+        etat("prêt (chant et danse) — décors en préparation")
+
+        # Décors du clip (facultatif) : SDXL + Lightning + détourage
+        try:
+            lancer([uv, "pip", "install", "-q", "--python", py, "rembg==2.0.67", "onnxruntime"])
+            script_decors = f"""
+import json, pathlib
+from huggingface_hub import snapshot_download, hf_hub_download
+m = pathlib.Path({str(modeles)!r})
+sdxl = snapshot_download("stabilityai/stable-diffusion-xl-base-1.0", local_dir=m / "sdxl", allow_patterns=[
+    "model_index.json", "*/config.json", "scheduler/*", "tokenizer/*", "tokenizer_2/*",
+    "text_encoder/model.fp16.safetensors", "text_encoder_2/model.fp16.safetensors",
+    "unet/diffusion_pytorch_model.fp16.safetensors", "vae/diffusion_pytorch_model.fp16.safetensors"])
+vae = snapshot_download("madebyollin/sdxl-vae-fp16-fix", local_dir=m / "sdxl-vae-fp16-fix",
+                        allow_patterns=["config.json", "diffusion_pytorch_model.safetensors"])
+lora = hf_hub_download("ByteDance/SDXL-Lightning", "sdxl_lightning_4step_lora.safetensors", local_dir=m / "lightning")
+from rembg import new_session
+new_session("isnet-general-use")
+print(json.dumps({{"sdxl": str(sdxl), "vae": str(vae), "lightning": str(lora)}}))
+"""
+            r = subprocess.run([str(py), "-c", script_decors], capture_output=True, text=True)
+            with open(journal, "a", encoding="utf-8") as f:
+                f.write(r.stdout[-2000:] + r.stderr[-3000:])
+            if r.returncode == 0:
+                chemins.update(json.loads(r.stdout.strip().splitlines()[-1]))
+                (dossier / "PRET.json").write_text(json.dumps(chemins), encoding="utf-8")
+                etat("prêt (chant, danse et décors)")
+            else:
+                etat("prêt (chant et danse) — décors indisponibles")
+        except Exception as e:
+            etat("prêt (chant et danse) — décors indisponibles : " + str(e)[:80])
     except Exception as e:
         etat("indisponible : " + str(e)[:140])
         raise

@@ -187,10 +187,16 @@ def synchroniser_paroles(voix: Path, langue="fr", journal=print):
         journal("faster-whisper absent : clip sans karaoké.")
         return []
     mots = None
+    try:  # audio décodé ici (évite l'incompatibilité de faster-whisper avec les nouvelles versions de PyAV)
+        import librosa
+        son, _ = librosa.load(str(voix), sr=16000, mono=True)
+    except Exception as e:
+        journal(f"Karaoké : lecture de la voix impossible ({e}).")
+        return []
     for device, calcul in (("cuda", "float16"), ("cpu", "int8")):
         try:
             modele = WhisperModel("small", device=device, compute_type=calcul)
-            segments, _ = modele.transcribe(str(voix), language=None if langue == "unknown" else langue,
+            segments, _ = modele.transcribe(son, language=None if langue == "unknown" else langue,
                                             word_timestamps=True, vad_filter=True)
             mots = [m for s in segments for m in (s.words or [])]
             break

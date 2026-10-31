@@ -1,5 +1,6 @@
 """Gestion des commandes clients et enchaînement de toutes les étapes."""
 import json
+import os
 import re
 import shutil
 import zipfile
@@ -11,27 +12,12 @@ import mixage
 import musique
 import separation
 import video_ia
+import texte
 import voix
 from config import DOSSIER_COMMANDES, FORMULES, LANGUES, STYLES
 
-BALISES = {  # l'IA comprend les balises anglaises
-    r"\[(couplet|verse)[^\]]*\]": "[Verse]",
-    r"\[(refrain|chorus)[^\]]*\]": "[Chorus]",
-    r"\[(pré-refrain|pre-refrain|pre-chorus)[^\]]*\]": "[Pre-Chorus]",
-    r"\[(pont|bridge)[^\]]*\]": "[Bridge]",
-    r"\[(intro)[^\]]*\]": "[Intro]",
-    r"\[(outro|fin)[^\]]*\]": "[Outro]",
-    r"\[(solo|instrumental)[^\]]*\]": "[Instrumental]",
-}
-
-
-def preparer_paroles(texte: str) -> str:
-    texte = (texte or "").strip()
-    for motif, balise in BALISES.items():
-        texte = re.sub(motif, balise, texte, flags=re.IGNORECASE)
-    if texte and not texte.lstrip().startswith("["):
-        texte = "[Verse]\n" + texte
-    return texte
+def preparer_paroles(texte_paroles: str) -> str:
+    return texte.nettoyer_paroles(texte_paroles)
 
 
 def _slug(texte):
@@ -97,8 +83,20 @@ def fabriquer_chanson(dossier: Path, enregistrements, journal=print):
     fiche["description_ia"] = description
     enregistrer_fiche(dossier, fiche)
     duree = min(float(fiche["duree"]), formule["duree_max"])
+    paroles_propres = preparer_paroles(fiche.get("paroles", ""))
+    if texte.mots_chantes(paroles_propres) >= 15:
+        besoin = texte.duree_necessaire(paroles_propres)
+        if besoin > duree:  # paroles trop longues pour la durée : on allonge, puis on coupe si besoin
+            nouvelle = min(float(formule["duree_max"]), round(besoin / 10) * 10)
+            if nouvelle > duree:
+                journal(f"Paroles longues : durée portée de {int(duree)} s à {int(nouvelle)} s pour bien les chanter.")
+                duree = nouvelle
+            paroles_propres, coupees = texte.ajuster_paroles(paroles_propres, duree)
+            if coupees:
+                journal(f"Attention : les paroles dépassent ce que permet la formule ({int(duree)} s). "
+                        "Les dernières parties ont été retirées. Choisissez une formule plus longue pour tout garder.")
     fichiers, paroles = musique.generer_chansons(
-        description=description, paroles=preparer_paroles(fiche.get("paroles", "")),
+        description=description, paroles=paroles_propres,
         langue=LANGUES.get(fiche["langue"], "fr"), bpm=fiche.get("bpm") or STYLES[fiche["style"]]["bpm"],
         duree=duree, versions=formule["versions"], dossier_sortie=travail, journal=journal,
         sujet=" ".join(x for x in (f"A {fiche['style']} song titled \"{fiche['titre']}\".",
@@ -194,6 +192,60 @@ def fabriquer_clip_et_livrer(dossier: Path, numero_version: int, photos, journal
     atelier.mkdir(parents=True)
     analyse, plans = module_clip.analyser_et_decouper(Path(version["wav"]), formule["clip_effets"], journal)
 
+    # Mémoire : sur Kaggle (≈ 30 Go), on met le moteur musical en pause pendant la vidéo IA
+    moteur_en_pause = False
+    if (formule.get("plans_chantes") or description_clip) and video_ia.performance_disponible() \
+            and _memoire_totale_go() < 48:
+        import demarrage
+        demarrage.arreter_moteur_musical()
+        moteur_en_pause = True
+        journal("Moteur musical mis en pause pendant la création vidéo (mémoire).")
+    try:
+        return _clip_suite(dossier, fiche, formule, version, livraison, final, photos_copiees, visage, titre, base,
+                           paroles_synchro, atelier, analyse, plans, look, description_clip, avec_chant,
+                           avec_danse, journal)
+    finally:
+        if moteur_en_pause:
+            import demarrage
+            demarrage.demarrer_moteur_musical()
+            journal("Moteur musical relancé (prêt dans 2 à 3 minutes).")
+
+
+def _memoire_totale_go():
+    try:
+        return os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES") / 1e9
+    except (ValueError, OSError, AttributeError):
+        return 64.0
+
+
+def decouper_scenes(description: str, maximum=6):
+    """« plage avec des filles ; deuxième photo devant des voitures… » -> une scène par morceau."""
+    morceaux = [m.strip(" .,-") for m in re.split(r"[;\n]+|(?<=[.!?])\s+", description or "") if m.strip(" .,-")]
+    propres = []
+    for m in morceaux:
+        m = re.sub(r"(?i)^(the\s+)?(first|second|third|fourth|fifth|other|last|\d+(st|nd|rd|th)?)\s+(photo|picture|image)\s*(with|in|on|at|:)?\s*", "", m)
+        m = re.sub(r"(?i)^(photo|picture|image)\s*\d*\s*(with|in|on|at|:)?\s*", "", m)
+        if len(m) > 3:
+            propres.append(m)
+    return propres[:maximum]
+
+
+def _clip_suite(dossier, fiche, formule, version, livraison, final, photos_copiees, visage, titre, base,
+                paroles_synchro, atelier, analyse, plans, look, description_clip, avec_chant, avec_danse, journal):
+    # Décors décrits par le client : la personne est placée dans chaque scène (plage, voitures, forêt…)
+    scenes_images = []
+    if description_clip and video_ia.decors_disponibles():
+        scenes = decouper_scenes(texte.traduire_en(description_clip))
+        if scenes:
+            taches_decors = [{"scene": sc, "photo": photos_copiees[k % len(photos_copiees)], "graine": 11 + k}
+                             for k, sc in enumerate(scenes)]
+            scenes_images = video_ia.generer_decors(taches_decors, atelier / "decors", journal)
+            journal(f"{len(scenes_images)} décor(s) créé(s) avec la personne dedans.")
+    elif description_clip:
+        journal("Créateur de décors pas encore prêt ici : la description guide seulement l'ambiance.")
+    if scenes_images:
+        photos_copiees = scenes_images + photos_copiees  # les scènes passent en premier dans le montage
+
     # Le chanteur chante (lèvres + gestes) et danse : EchoMimicV3 (version en ligne)
     animations, levres = {}, {}
     nb_chant = formule.get("plans_chantes", 0) if avec_chant else 0
@@ -203,7 +255,7 @@ def fabriquer_clip_et_livrer(dossier: Path, numero_version: int, photos, journal
         journal("Moteur « le chanteur chante et danse » pas encore prêt ici : clip fait avec les photos.")
     if performance:
         plans, choix = module_clip.preparer_plans_performance(plans, Path(version["voix"]), nb_chant, nb_danse)
-        visages = [visage] if visage else []
+        visages = [visage] if (visage and not scenes_images) else []  # avec décors : la personne y est déjà
         sources = visages + [p for p in photos_copiees if p != visage] or photos_copiees
         taches = []
         for n, (k, nature) in enumerate(choix.items()):

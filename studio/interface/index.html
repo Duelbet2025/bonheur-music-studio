@@ -384,10 +384,10 @@ async function ouvrirDetail(id) {
       <div class="ligne" style="margin-top:14px">
         <div class="champ"><label for="look">Couleurs du clip</label><select id="look">${OPTIONS.looks.map(l => `<option ${l === (c.look || "Naturel") ? "selected" : ""}>${echapper(l)}</option>`).join("")}</select></div>
         <div class="champ"><label for="description_clip">Description du clip (facultatif)</label>
-          <input type="text" id="description_clip" value="${echapper(c.description_clip || "")}" placeholder="ex. elle danse joyeusement, ambiance de fête, lumières dorées"></div>
+          <input type="text" id="description_clip" value="${echapper(c.description_clip || "")}" placeholder="Une scène par photo, séparées par « ; » — ex. plage au coucher du soleil avec des amis ; devant des voitures de luxe ; dans une forêt"></div>
       </div>
       <p class="aide">${c.formule === "Standard" ? "Formule Standard : photos animées par zooms, mouvements et flashs calés sur le rythme." :
-        "Le clip mélange des plans où la personne chante et danse (fabriqués par l'IA à partir de ses photos) et des plans montés sur le rythme. Comptez environ 3 à 5 minutes par plan vivant. La description (en anglais de préférence) guide l'ambiance."}</p>
+        "Décrivez les décors voulus (une scène par photo, séparées par « ; ») : l'IA crée chaque décor et y place la personne, puis la fait chanter (lèvres et gestes) et danser. Le reste du clip est monté sur le rythme. Comptez 3 à 5 minutes par plan vivant."}</p>
       <div style="margin-top:14px;display:flex;gap:14px;align-items:center">
         <button class="btn" id="b-clip" ${actif ? "disabled" : ""}>Fabriquer le clip avec la version choisie</button>
         <span id="msg-clip" role="status"></span></div></section>`;
