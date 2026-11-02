@@ -10,7 +10,7 @@ class ErreurSeparation(Exception):
     pass
 
 
-def separer(fichier: Path, dossier_sortie: Path, quatre_pistes=False, journal=print):
+def separer(fichier: Path, dossier_sortie: Path, quatre_pistes=False, journal=print, modele="htdemucs"):
     """Sépare un fichier audio.
 
     - deux pistes : voix + accompagnement
@@ -19,7 +19,7 @@ def separer(fichier: Path, dossier_sortie: Path, quatre_pistes=False, journal=pr
     """
     dossier_sortie.mkdir(parents=True, exist_ok=True)
     tmp = dossier_sortie / "_demucs"
-    cmd = [os.environ.get("BMS_PYTHON_SEPARATION", sys.executable), "-m", "demucs", "-n", "htdemucs", "-o", str(tmp), "--float32"]
+    cmd = [os.environ.get("BMS_PYTHON_SEPARATION", sys.executable), "-m", "demucs", "-n", modele, "-o", str(tmp), "--float32"]
     if not quatre_pistes:
         cmd += ["--two-stems", "vocals"]
     cmd.append(str(fichier))
@@ -28,7 +28,7 @@ def separer(fichier: Path, dossier_sortie: Path, quatre_pistes=False, journal=pr
     if proc.returncode != 0:
         raise ErreurSeparation(proc.stderr[-1500:])
 
-    source = tmp / "htdemucs" / fichier.stem
+    source = tmp / modele / fichier.stem
     noms = {"vocals": "voix", "no_vocals": "accompagnement", "drums": "batterie",
             "bass": "basse", "other": "instruments"}
     pistes = {}

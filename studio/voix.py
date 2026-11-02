@@ -40,7 +40,11 @@ def _applio(args, journal):
         if not ligne:
             continue
         derniers = (derniers + [ligne])[-30:]
-        if re.search(r"epoch|Epoch|époque|Saved|saved|index", ligne):
+        m = re.search(r"epoch=(\d+)", ligne)
+        if m:  # une ligne toutes les 25 époques (sinon le journal est noyé)
+            if "time=" in ligne and int(m.group(1)) % 25 == 0:
+                journal("   " + ligne[:160])
+        elif re.search(r"Saved|saved|index|completed|Lowest|Error|error", ligne):
             journal("   " + ligne[:160])
     if proc.wait() != 0:
         raise ErreurVoix("Applio a échoué :\n" + "\n".join(derniers))
@@ -110,13 +114,27 @@ def entrainer_voix(nom_client: str, enregistrements, epoques: int, nettoyer=True
     return dossier_client / "voix.pth", dossier_client / "voix.index"
 
 
-def convertir_voix(voix_ia: Path, sortie: Path, pth: Path, index: Path, transposition=0, journal=print):
-    """Remplace la voix chantée par l'IA par la voix du client."""
-    _applio(["infer", "--input-path", voix_ia.resolve(), "--output-path", sortie.resolve(),
-             "--pth-path", pth.resolve(), "--index-path", index.resolve(),
-             "--pitch", int(transposition), "--f0-method", "rmvpe",
-             "--index-rate", 0.6, "--protect", 0.33, "--volume-envelope", 1.0,
-             "--export-format", "WAV"], journal)
+def convertir_voix(voix_ia: Path, sortie: Path, pth: Path, index: Path, transposition=0, journal=print,
+                   genre="Homme"):
+    """Remplace la voix chantée par l'IA par la voix du client.
+
+    - hauteur adaptée automatiquement à la tessiture du client (« proposed pitch ») ;
+    - index plus présent (timbre plus fidèle), consonnes et souffles protégés ;
+    - enveloppe de volume en partie celle de l'original (phrasé naturel), légère correction de justesse.
+    """
+    args = ["infer", "--input-path", voix_ia.resolve(), "--output-path", sortie.resolve(),
+            "--pth-path", pth.resolve(), "--index-path", index.resolve(),
+            "--pitch", int(transposition), "--f0-method", "rmvpe",
+            "--index-rate", 0.75, "--protect", 0.4, "--volume-envelope", 0.6,
+            "--f0-autotune", "--f0-autotune-strength", 0.3, "--export-format", "WAV"]
+    if int(transposition) == 0:  # pas de réglage manuel : l'outil cale la hauteur sur la voix du client
+        args += ["--proposed-pitch", "--proposed-pitch-threshold", 155.0 if genre == "Homme" else 255.0]
+    try:
+        _applio(args, journal)
+    except ErreurVoix:  # ancienne version d'Applio : réglages de base
+        _applio(["infer", "--input-path", voix_ia.resolve(), "--output-path", sortie.resolve(),
+                 "--pth-path", pth.resolve(), "--index-path", index.resolve(), "--pitch", int(transposition),
+                 "--f0-method", "rmvpe", "--index-rate", 0.75, "--protect", 0.4, "--export-format", "WAV"], journal)
     if not sortie.exists():
         raise ErreurVoix("La conversion de voix n'a pas produit de fichier.")
     return sortie

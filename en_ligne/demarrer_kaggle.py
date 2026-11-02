@@ -232,6 +232,30 @@ print(f"\n✅ STUDIO EN LIGNE : ouvrez votre page « Bonheur Music Studio » (el
 
 # ---------------------------------------------------------------- surveillance
 dernier_envoi, etat_perf_signale = time.time(), ""
+autotest_lance = False
+
+
+def autotest():
+    """Teste une fois le clip vivant (décor + chant) et envoie le résultat (lisible par Claude)."""
+    em = RACINE / "moteurs/EchoMimicV3"
+    try:
+        r = subprocess.run([str(em / "env/bin/python"), str(RACINE / "studio/moteurs_video/autotest.py"),
+                            str(em / "PRET.json"), str(SORTIES / "autotest")], cwd=em, capture_output=True,
+                           text=True, timeout=3600, env=dict(env, CUDA_VISIBLE_DEVICES="1" if NB_GPU >= 2 else "0"))
+        lignes = [l for l in (r.stdout + r.stderr).splitlines() if "AUTOTEST" in l]
+        signal("TEST " + (lignes[-1] if lignes else (r.stdout + r.stderr)[-1500:])[:3500])
+    except Exception as e:
+        signal(f"TEST ECHEC autotest : {e}")
+
+
+def sauver_journaux():
+    dest = SORTIES / "journaux"
+    dest.mkdir(exist_ok=True)
+    for f in list(LOGS.glob("*.log")) + list((RACINE / "moteurs").glob("*.log")):
+        try:
+            shutil.copy(f, dest / f.name)
+        except Exception:
+            pass
 while studio.poll() is None:
     time.sleep(20)
     if tunnel is not None and tunnel.poll() is not None:  # lien tombé : on en refait un
@@ -246,15 +270,20 @@ while studio.poll() is None:
     if etat_perf != etat_perf_signale:
         etat_perf_signale = etat_perf
         print("   moteur chant/danse :", etat_perf, flush=True)
+    if not autotest_lance and etat_perf.startswith("prêt") and "préparation" not in etat_perf:
+        autotest_lance = True
+        threading.Thread(target=autotest, daemon=True).start()
     if time.time() - dernier_envoi > 600:  # rappel régulier du lien pour la page de lancement
         signal(f"LIEN {lien}")
         dernier_envoi = time.time()
+        sauver_journaux()
     if time.time() - DEBUT > DUREE_MAX:
         signal("ETAT Fin de session Kaggle proche : téléchargez vos livraisons.")
         time.sleep(600)
         studio.terminate()
         break
 
+sauver_journaux()
 signal("FERME", titre="Studio fermé")
 for p in (tunnel, perf):
     try:

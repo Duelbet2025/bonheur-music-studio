@@ -79,7 +79,8 @@ def fabriquer_chanson(dossier: Path, enregistrements, journal=print):
 
     # 1. Composition (d'abord : si le moteur musical a un souci, on le sait tout de suite)
     description = musique.construire_description(
-        fiche["style"], fiche["ambiance"], fiche["instruments"], fiche["voix_genre"], fiche.get("description", ""))
+        fiche["style"], fiche["ambiance"], fiche["instruments"], fiche["voix_genre"], fiche.get("description", ""),
+        voix_solo=not fiche.get("voix_ia"))
     fiche["description_ia"] = description
     enregistrer_fiche(dossier, fiche)
     duree = min(float(fiche["duree"]), formule["duree_max"])
@@ -124,12 +125,13 @@ def fabriquer_chanson(dossier: Path, enregistrements, journal=print):
     for i, ia in enumerate(fichiers, start=1):
         journal(f"— Version {i}/{len(fichiers)} —")
         pistes = separation.separer(ia, travail / f"pistes_v{i}", quatre_pistes=formule["pistes_separees"],
-                                    journal=journal)
+                                    journal=journal, modele="htdemucs_ft" if modele else "htdemucs")
         voix_finale = pistes["voix"]
         if modele:
             journal("Remplacement de la voix de l'IA par la voix du client…")
             voix_finale = voix.convertir_voix(pistes["voix"], travail / f"voix_client_v{i}.wav",
-                                              *modele, transposition=fiche.get("transposition", 0), journal=journal)
+                                              *modele, transposition=fiche.get("transposition", 0), journal=journal,
+                                              genre=fiche.get("voix_genre", "Homme"))
         accompagnements = [p for n, p in pistes.items() if n != "voix"]
         master = mixage.mixer(voix_finale, accompagnements, livraison / f"version_{i}.wav")
         mp3 = mixage.exporter_mp3(master, livraison / f"version_{i}.mp3", fiche["titre"], fiche["client"])

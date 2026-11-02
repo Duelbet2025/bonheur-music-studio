@@ -85,6 +85,11 @@ def _ouvrier():
             except Exception:
                 pass
         finally:
+            try:  # le journal est gardé dans le dossier de la commande (pour analyser après coup)
+                (DOSSIER_COMMANDES / t["commande"] / f"journal_{t['type']}.txt").write_text(
+                    "\n".join(t["journal"]), encoding="utf-8")
+            except Exception:
+                pass
             FILE.task_done()
 
 

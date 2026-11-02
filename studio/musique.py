@@ -18,7 +18,8 @@ def serveur_pret() -> bool:
         return False
 
 
-def construire_description(style, ambiance, instruments, voix_genre, description_libre="", avec_voix=True):
+def construire_description(style, ambiance, instruments, voix_genre, description_libre="", avec_voix=True,
+                           voix_solo=False):
     """Assemble la description (en anglais) envoyée à l'IA.
 
     La demande du client passe en premier (c'est elle qui compte le plus), puis le style, l'ambiance,
@@ -32,7 +33,10 @@ def construire_description(style, ambiance, instruments, voix_genre, description
     morceaux = []
     if libre.strip():
         morceaux.append(libre.strip().rstrip("."))
-    morceaux.append(STYLES[style]["tags"])
+    tags = STYLES[style]["tags"]
+    if voix_solo:  # la voix du client remplacera celle de l'IA : une seule voix nette, sans chœurs ni réponses
+        tags = re.sub(r",?\s*(call and response vocals|group choir vocals|backing choir)", "", tags)
+    morceaux.append(tags)
     if ambiance in AMBIANCES:
         morceaux.append(AMBIANCES[ambiance])
     for nom, niveau in (instruments or {}).items():
@@ -46,7 +50,8 @@ def construire_description(style, ambiance, instruments, voix_genre, description
         morceaux.append("no " + ", no ".join(absents))
     if avec_voix:
         genre = "male" if voix_genre == "Homme" else "female"
-        morceaux.append(f"powerful clear {genre} lead vocals upfront in the mix, intelligible lyrics")
+        morceaux.append(f"powerful clear {genre} lead vocals upfront in the mix, intelligible lyrics"
+                        + (", single solo lead singer, dry vocal, no backing vocals, no choir" if voix_solo else ""))
     morceaux.append("professional studio mix and master")
     return ", ".join(morceaux)[:1200]
 
@@ -121,8 +126,13 @@ def generer_chansons(*, description, paroles, langue, bpm, duree, versions,
 
     Retourne (liste des fichiers .wav, liste des paroles).
     """
-    if not serveur_pret():
-        raise ErreurMusique("Le moteur musical n'est pas encore démarré : attendez que son voyant soit vert.")
+    if not serveur_pret():  # moteur en démarrage (ou relancé après un clip) : on patiente jusqu'à 15 min
+        journal("Le moteur musical démarre, la composition commencera dès qu'il est prêt…")
+        debut = time.time()
+        while not serveur_pret():
+            if time.time() - debut > 900:
+                raise ErreurMusique("Le moteur musical ne répond pas. Fermez et rallumez le studio.")
+            time.sleep(10)
 
     base = {
         "prompt": description,

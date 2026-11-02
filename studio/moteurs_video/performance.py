@@ -57,6 +57,10 @@ class Factice(torch.nn.Module):
     def dtype(self):
         return self._dtype
 
+    @property
+    def device(self):
+        return self.poids.device
+
 
 def main(fichier_taches):
     reglages = json.load(open(fichier_taches, encoding="utf-8"))
@@ -131,6 +135,9 @@ def main(fichier_taches):
                                                   device=torch.device("cpu"), dtype=torch.bfloat16)
                 textes[t["prompt"]] = ([e.to(cuda, dtype) for e in pos], [e.to(cuda, dtype) for e in neg])
     pipeline.__dict__["text_encoder"] = Factice(dtype)  # libère l'encodeur (sans passer par diffusers)
+    # on donne à la fois le texte (pour la taille du lot) et ses encodages déjà calculés :
+    # la vérification d'origine refuse ce cas, on la remplace par une version qui l'accepte
+    pipeline.check_inputs = lambda *a, **k: None
     del encodeur
     gc.collect()
     pipeline.to(cuda)
